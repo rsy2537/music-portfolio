@@ -560,11 +560,13 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     opacity: 0;
   }
 
-  /* 세로 화면(폰 등): 띠는 얇게 고정해서 아래 노드 자리를 남김 */
+    /* 세로 화면(폰 등): 띠 높이를 화면 높이의 비율로 고정 (PC는 위의 자동 계산 그대로)
+     두께 조절은 --lb-phone 숫자 하나로 (예: 13.5 = 1.5배, 18 = 2배) */
   @media (max-aspect-ratio: 1/1) {
     .letterbox {
-      height: 9vh;
-      height: 9dvh;
+      --lb-phone: 18;
+      height: calc(var(--lb-phone) * 1vh);
+      height: calc(var(--lb-phone) * 1dvh);
     }
   }
 
