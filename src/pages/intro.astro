@@ -1,7 +1,24 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import tracks from '../data/tracks.json';
 // 영어 포인트용 세리프 기울임체 (사이트 안에 직접 포함, 외부 접속 없음). 500 기울임 하나만
 import '@fontsource/cormorant-garamond/500-italic.css';
+
+// ===== 마인드맵 노드 위치 (EKG와 같은 가로 틀 1200×340 기준) =====
+// x, y: 노드 점의 위치 / side: 글자가 점의 왼쪽(left)에 붙는지 오른쪽(right)에 붙는지
+// 곡 제목·감정 키워드는 tracks.json에서 자동으로 가져옴
+const LAYOUT: Record<string, { x: number; y: number; side: 'left' | 'right' }> = {
+  'roar':                 { x: 330, y: 70,  side: 'left' },
+  'night-march':          { x: 170, y: 174, side: 'left' },
+  'winter-afterimage':    { x: 330, y: 274, side: 'left' },
+  'where-sunlight-stays': { x: 870, y: 84,  side: 'right' },
+  'last-echo':            { x: 950, y: 254, side: 'right' },
+};
+
+// tracks.json 순서대로 (Tab 이동 순서도 이 순서)
+const nodes = tracks
+  .filter((t) => t.slug in LAYOUT)
+  .map((t) => ({ ...t, ...LAYOUT[t.slug] }));
 ---
 
 <BaseLayout
@@ -60,7 +77,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
       })();
     </script>
 
-    <!-- 가운데: 양쪽 EKG 선 + 심장 버튼 -->
+    <!-- 가운데: 양쪽 EKG 선(→ 나중에 가지) + 곡 노드 + 심장 버튼 -->
     <div class="stage">
       <div class="ekg-wrap" aria-hidden="true">
         <svg class="ekg" viewBox="0 0 1200 340">
@@ -74,7 +91,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
           </defs>
 
           <!-- 왼쪽: 빛이 왼쪽 끝 → 원으로 -->
-          <g>
+          <g class="ekg-side">
             <use href="#ekg-half" class="ekg-base" />
             <g class="comet">
               <use href="#ekg-half" class="ekg-tail ekg-tail-3" />
@@ -84,7 +101,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
           </g>
 
           <!-- 오른쪽: 같은 선을 좌우로 뒤집음. 빛이 오른쪽 끝 → 원으로 -->
-          <g transform="translate(1200 0) scale(-1 1)">
+          <g class="ekg-side" transform="translate(1200 0) scale(-1 1)">
             <use href="#ekg-half" class="ekg-base" />
             <g class="comet">
               <use href="#ekg-half" class="ekg-tail ekg-tail-3" />
@@ -92,8 +109,37 @@ import '@fontsource/cormorant-garamond/500-italic.css';
               <use href="#ekg-half" class="ekg-tail ekg-tail-1" />
             </g>
           </g>
+
+          <!-- 마인드맵 가지 (완성 모습). /lab 실험 모양 그대로. 평소엔 숨김, 건너뛴 상태에서 보임 -->
+          <g class="branches">
+            <!-- 큰 가지: 바깥 노드 → 가운데 점 -->
+            <path class="branch" d="M 170 174 C 350 190, 480 170, 600 170" />
+            <path class="branch" d="M 950 254 C 820 240, 720 170, 600 170" />
+            <!-- 잔가지: 큰 가지 중간 → 노드 -->
+            <path class="twig" d="M 444 176 C 400 140, 364 100, 330 70" />
+            <path class="twig" d="M 410 182 C 376 220, 352 250, 330 274" />
+            <path class="twig" d="M 704 180 C 760 140, 820 100, 870 84" />
+          </g>
         </svg>
       </div>
+
+      <!-- 곡 노드: 진짜 링크(곡 페이지로 이동). 위치는 SVG와 같은 틀 위에 % 로 맞춤 -->
+      <nav class="map" aria-label="대표곡">
+        {nodes.map((n) => (
+          <a
+            class={`node node-${n.side}`}
+            href={`/tracks/${n.slug}`}
+            data-slug={n.slug}
+            style={`--x: ${n.x}; --y: ${n.y};`}
+          >
+            <span class="node-dot-wrap" aria-hidden="true"><span class="node-dot"></span></span>
+            <span class="node-text">
+              <span class="node-title">{n.title}</span>
+              {n.emotion && <span class="node-kw">{n.emotion.join(' · ')}</span>}
+            </span>
+          </a>
+        ))}
+      </nav>
 
       <!-- 심장 버튼: 첫 박동에 하얀 빛으로 켜지고, 이후 박동마다 하얗게 부풂.
            마우스 올림 / 누름 / 키보드 선택 시에는 앰버 빛으로 바뀜.
@@ -137,12 +183,12 @@ import '@fontsource/cormorant-garamond/500-italic.css';
             markSeen();
           });
 
-          // Skip: 연출 없이 끝 상태로 바로 (음악은 틀지 않음. 점을 누르면 재생)
+          // Skip: 연출 없이 끝 상태(마인드맵 완성)로 바로 (음악은 틀지 않음)
           if (skip) {
             skip.addEventListener('click', function () {
               intro.classList.add('is-skipped', 'is-started');
               markSeen();
-              btn.focus({ preventScroll: true });  // 키보드 사용자를 위해 초점을 원으로 옮김
+              btn.focus({ preventScroll: true });  // 키보드 사용자를 위해 초점을 가운데로 옮김
             });
           }
         })();
@@ -323,6 +369,125 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     stroke-width: var(--ekg-w);
     stroke-linecap: round;
     stroke-linejoin: round;
+  }
+
+  /* ---------- 마인드맵 가지 (완성 모습) ----------
+     평소엔 숨김. 건너뛴 상태에서는 EKG 대신 가지가 보임 (C-3에서 클릭 후 연출로 이어짐) */
+  .branches {
+    visibility: hidden;
+  }
+  .branch,
+  .twig {
+    fill: none;
+    stroke: #E8B04A;
+    stroke-linecap: round;
+    opacity: 0.55;  /* 가지 밝기 (0.3 ~ 0.9) */
+  }
+  .branch {
+    stroke-width: 3;
+  }
+  .twig {
+    stroke-width: 2;
+  }
+
+  .intro:global(.is-skipped) .branches {
+    visibility: visible;
+  }
+  .intro:global(.is-skipped) .ekg-side {
+    visibility: hidden;
+  }
+
+  /* ---------- 곡 노드 ----------
+     SVG와 똑같은 크기의 투명한 판(.map)을 위에 겹치고, 노드를 x/1200, y/340 비율 위치에 놓음
+     → 화면 크기가 바뀌어도 가지 끝과 노드가 같이 움직임 */
+  .map {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: max(100%, 560px);  /* SVG 폭과 같게 */
+    height: 100%;
+    transform: translateX(-50%);
+    visibility: hidden;
+  }
+
+  .intro:global(.is-skipped) .map {
+    visibility: visible;
+  }
+
+  .node {
+    position: absolute;
+    top: calc(var(--y) / 340 * 100%);
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    min-height: 44px;  /* 터치 영역 44px 이상 */
+    color: #F0E6D2;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 글자가 점의 오른쪽: 점(44px 칸의 가운데)이 정확히 x 위치에 오도록 */
+  .node-right {
+    left: calc(var(--x) / 1200 * 100%);
+    margin-left: -22px;
+  }
+
+  /* 글자가 점의 왼쪽: 순서를 뒤집고 오른쪽 정렬 */
+  .node-left {
+    right: calc((1200 - var(--x)) / 1200 * 100%);
+    margin-right: -22px;
+    flex-direction: row-reverse;
+    text-align: right;
+  }
+
+  .node-dot-wrap {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .node-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #E8B04A;
+    transition: transform 0.25s ease;
+  }
+
+  .node-text {
+    display: flex;
+    flex-direction: column;
+    white-space: nowrap;
+  }
+
+  .node-title {
+    font-size: clamp(0.95rem, 1.25vw, 1.25rem);
+    font-weight: 500;
+    line-height: 1.3;
+    transition: color 0.25s ease;
+  }
+
+  .node-kw {
+    font-size: clamp(0.75rem, 0.9vw, 0.875rem);
+    color: #A89C88;
+    line-height: 1.4;
+  }
+
+  /* 마우스 올림 / 키보드 선택: 점이 커지고 제목이 앰버로 */
+  .node:hover .node-dot,
+  .node:focus-visible .node-dot {
+    transform: scale(1.4);
+  }
+  .node:hover .node-title,
+  .node:focus-visible .node-title {
+    color: #E8B04A;
+  }
+  .node:focus-visible {
+    outline: 2px solid #E8B04A;
+    outline-offset: 4px;
+    border-radius: 4px;
   }
 
   /* ===== 연출 시간표 =====
