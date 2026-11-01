@@ -6,7 +6,7 @@ import '@fontsource/noto-sans-kr/500.css'; // 중간 굵기 (곡 제목용)
 // 모든 페이지가 같이 쓰는 틀(액자)
 interface Props {
   title?: string;
-  description?: string; // 새로 추가: 페이지 설명
+  description?: string; // 페이지 설명
 }
 const {
   title = 'Music Portfolio',
@@ -19,10 +19,10 @@ const {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
-<meta name="description" content={description} />
-<meta property="og:title" content={title} />
-<meta property="og:description" content={description} />
-<meta property="og:type" content="website" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
   </head>
   <body>
     <main>
@@ -36,120 +36,9 @@ const {
 </html>
 
 <script>
-  const audio = document.querySelector<HTMLAudioElement>('#player')!;
-  const buttons = document.querySelectorAll<HTMLButtonElement>('.play');
-  let current: HTMLButtonElement | null = null;
-  let switchId = 0; // 연타했을 때 마지막 버튼만 반영하기 위한 번호
-  let switching = false; // 곡을 바꾸는 중(페이드 + 불러오기)이면 true
-  let fadeTimer: ReturnType<typeof setInterval> | undefined; // 지금 돌고 있는 페이드
-
-  // 페이드아웃 시간(밀리초). 느낌에 따라 조절 (예: 300, 600)
-  const FADE_MS = 400;
-
-  // 이 기기가 볼륨 조절을 허락하는지 확인 (아이폰은 허락 안 함 → 페이드 생략)
-  const canFade = (() => {
-    const test = new Audio();
-    test.volume = 0.5;
-    return test.volume === 0.5;
-  })();
-
-  buttons.forEach((btn) => (btn.dataset.label = btn.textContent?.trim() ?? ''));
-
-  // 버튼 상태: 'idle'(대기) / 'loading'(불러오는 중) / 'playing'(재생 중)
-  function setState(btn: HTMLButtonElement, state: 'idle' | 'loading' | 'playing') {
-    if (state === 'playing') btn.textContent = '❚❚ 일시정지';
-    else if (state === 'loading') btn.textContent = '… 불러오는 중';
-    else btn.textContent = btn.dataset.label!;
-    btn.setAttribute('aria-pressed', String(state !== 'idle'));
-    btn.setAttribute('aria-busy', String(state === 'loading'));
-  }
-
-  // 돌고 있는 페이드가 있으면 멈춘다
-  function stopFade() {
-    if (fadeTimer !== undefined) {
-      clearInterval(fadeTimer);
-      fadeTimer = undefined;
-    }
-  }
-
-  // 새 곡을 넣고 재생한다. 재생이 막히면 버튼을 원래대로 돌린다
-  function startTrack(btn: HTMLButtonElement) {
-    stopFade();
-    audio.volume = 1;
-    const start = Number(btn.dataset.start ?? 0);
-    // 주소 끝에 #t=초 를 붙이면 브라우저가 그 지점부터 재생한다
-    audio.src = start > 0 ? `${btn.dataset.src}#t=${start}` : btn.dataset.src!;
-    audio.play().catch(() => {
-      if (current === btn) {
-        switching = false;
-        setState(btn, 'idle');
-      }
-    });
-  }
-
-  // 지금 소리를 FADE_MS 동안 서서히 줄이고, 다 줄면 done을 실행한다
-  // (화면 그리기와 상관없이 시계 기준으로 줄여서, 중간에 멈추지 않는다)
-  function fadeOut(done: () => void) {
-    stopFade();
-    const startVolume = audio.volume;
-    const startTime = performance.now();
-    fadeTimer = setInterval(() => {
-      const progress = Math.min((performance.now() - startTime) / FADE_MS, 1);
-      audio.volume = startVolume * (1 - progress);
-      if (progress >= 1) {
-        stopFade();
-        audio.pause();
-        done();
-      }
-    }, 20);
-  }
-
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      // 같은 버튼
-      if (current === btn) {
-        if (switching) return; // 곡을 바꾸는 중이면 무시 (엉뚱한 곡이 끊기지 않게)
-        if (audio.paused) {
-          audio.play().catch(() => setState(btn, 'idle'));
-        } else {
-          audio.pause();
-        }
-        return;
-      }
-
-      // 다른 버튼: 이전 버튼 원래대로, 새 버튼은 '불러오는 중'
-      if (current) setState(current, 'idle');
-      current = btn;
-      switching = true;
-      setState(btn, 'loading');
-      const myId = ++switchId;
-
-      // 아무것도 안 나오고 있거나, 볼륨 조절이 안 되는 기기 → 기다리지 않고 바로 재생
-      if (audio.paused || !canFade) {
-        startTrack(btn);
-        return;
-      }
-
-      // 나오고 있는 곡이 있으면 → 스르륵 줄인 뒤 새 곡 재생
-      fadeOut(() => {
-        if (myId === switchId) startTrack(btn); // 그 사이 다른 버튼을 눌렀으면 취소
-      });
-    });
-  });
-
-  // 실제 소리 상태에 맞춰 버튼을 바꾼다
-  audio.addEventListener('playing', () => {
-    switching = false;
-    if (current) setState(current, 'playing');
-  });
-  audio.addEventListener('waiting', () => current && setState(current, 'loading'));
-  audio.addEventListener('pause', () => {
-    if (!switching && current) setState(current, 'idle'); // 곡 바꾸는 중의 멈춤은 무시
-  });
-  audio.addEventListener('error', () => {
-    switching = false;
-    if (current) setState(current, 'idle');
-  });
+  // 재생 기능은 src/scripts/player.ts 한 곳에서 관리한다
+  import { bindPlayButtons } from '../scripts/player';
+  bindPlayButtons();
 </script>
 
 <style is:global>
