@@ -1,0 +1,158 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Intro (테스트) | Music Portfolio"
+  description="독립영화를 위한 맞춤 스코어">
+  <section class="intro">
+    <h1 class="intro-text" id="intro-title">독립영화를 위한 맞춤 스코어</h1>
+    <script is:inline>
+      // 타입온: 제목을 한 글자씩 span으로 나눠 차례로 나타나게 함 (한 번만)
+      (function () {
+        var title = document.getElementById('intro-title');
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!title || reduce) return;
+
+        var text = title.textContent.trim();
+        title.setAttribute('aria-label', text);
+        title.textContent = '';
+
+        Array.from(text).forEach(function (ch, i) {
+          var span = document.createElement('span');
+          span.className = 'char';
+          span.textContent = ch;
+          span.setAttribute('aria-hidden', 'true');
+          span.style.animationDelay = (300 + i * 140) + 'ms';  // 글자마다 0.14초 간격
+          title.appendChild(span);
+        });
+      })();
+    </script>
+
+    <!-- 임시 EKG 선: 가로 틀(1200×340), 가운데 박동 1개(작은 앞 언덕 → 날카로운 박동 → 작은 뒤 언덕). B단계에서 높은음자리표로 모핑 -->
+    <svg class="ekg" viewBox="0 0 1200 340" aria-hidden="true">
+      <path
+        class="ekg-base"
+        pathLength="1"
+        d="M 0 170 L 532 170 C 538 170, 541 152, 546 152 C 551 152, 554 170, 560 170 L 576 170 L 584 182 L 600 20 L 618 320 L 630 170 L 646 170 C 653 170, 657 142, 666 142 C 675 142, 679 170, 686 170 L 1200 170"
+      />
+      <path
+        class="ekg-pulse"
+        pathLength="1"
+        d="M 0 170 L 532 170 C 538 170, 541 152, 546 152 C 551 152, 554 170, 560 170 L 576 170 L 584 182 L 600 20 L 618 320 L 630 170 L 646 170 C 653 170, 657 142, 666 142 C 675 142, 679 170, 686 170 L 1200 170"
+      />
+    </svg>
+
+    <button type="button" class="listen-btn" id="intro-listen">
+      Click to Listen
+    </button>
+  </section>
+</BaseLayout>
+
+<style>
+  .intro {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: #0B0908;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(1.5rem, 5vh, 3.5rem);
+    padding: 2rem 0;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .intro-text {
+    margin: 0;
+    padding: 0 1.5rem;
+    color: #F0E6D2;
+    font-size: clamp(2.25rem, 7vw, 5.5rem);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    word-break: keep-all;
+  }
+
+  /* 타입온: 한 글자씩 써지고 그대로 머묾 (반복 없음) */
+  .intro-text :global(.char) {
+    opacity: 0;
+    animation: type-in 0.25s ease-out forwards;
+  }
+
+  @keyframes type-in {
+    to { opacity: 1; }
+  }
+
+  .ekg {
+    display: block;
+    width: max(100%, 720px);
+    height: auto;
+  }
+
+  .ekg path {
+    fill: none;
+    stroke: #E8B04A;
+    stroke-width: 5.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* 폰(화면 600px 이하): 선이 축소돼도 잘 보이게 더 굵게 */
+  @media (max-width: 600px) {
+    .ekg path {
+      stroke-width: 7.2;
+    }
+  }
+
+  .ekg-base {
+    opacity: 0.2;
+  }
+
+  .ekg-pulse {
+    stroke-dasharray: 0.25 1.5;
+    animation: sweep 4s linear infinite;
+  }
+
+  @keyframes sweep {
+    0%   { stroke-dashoffset: 0.25; }
+    70%  { stroke-dashoffset: -1.05; }
+    100% { stroke-dashoffset: -1.05; }
+  }
+
+  .listen-btn {
+    min-height: 44px;
+    padding: 0.85rem 1.75rem;
+    background: transparent;
+    color: #F0E6D2;
+    border: 1px solid #A89C88;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .listen-btn:hover {
+    border-color: #E8B04A;
+    color: #E8B04A;
+  }
+
+  .listen-btn:focus-visible {
+    outline: 2px solid #E8B04A;
+    outline-offset: 4px;
+  }
+
+  /* 움직임 줄이기 설정이면 빛줄기를 숨기고 선만 또렷하게 (타입온은 스크립트에서 이미 꺼짐) */
+  @media (prefers-reduced-motion: reduce) {
+    .ekg-pulse {
+      animation: none;
+      display: none;
+    }
+    .ekg-base {
+      opacity: 0.8;
+    }
+  }
+</style>
