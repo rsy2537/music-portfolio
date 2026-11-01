@@ -27,35 +27,95 @@ const { title = 'Music Portfolio' } = Astro.props;
   const audio = document.querySelector<HTMLAudioElement>('#player')!;
   const buttons = document.querySelectorAll<HTMLButtonElement>('.play');
   let current: HTMLButtonElement | null = null;
+  let switchId = 0; // 연타했을 때 마지막 버튼만 반영하기 위한 번호
 
-  // 버튼에 원래 적혀 있던 글자를 기억해 둔다
+  // 페이드아웃 시간(밀리초). 느낌에 따라 조절 (예: 300, 600)
+  const FADE_MS = 400;
+
+  // 이 기기가 볼륨 조절을 허락하는지 확인 (아이폰은 허락 안 함 → 페이드 생략)
+  const canFade = (() => {
+    const test = new Audio();
+    test.volume = 0.5;
+    return test.volume === 0.5;
+  })();
+
   buttons.forEach((btn) => (btn.dataset.label = btn.textContent?.trim() ?? ''));
 
-  function setLabel(btn: HTMLButtonElement, playing: boolean) {
-    btn.textContent = playing ? '❚❚ 일시정지' : btn.dataset.label!;
-    btn.setAttribute('aria-pressed', String(playing));
+  // 버튼 상태: 'idle'(대기) / 'loading'(불러오는 중) / 'playing'(재생 중)
+  function setState(btn: HTMLButtonElement, state: 'idle' | 'loading' | 'playing') {
+    if (state === 'playing') btn.textContent = '❚❚ 일시정지';
+    else if (state === 'loading') btn.textContent = '… 불러오는 중';
+    else btn.textContent = btn.dataset.label!;
+    btn.setAttribute('aria-pressed', String(state !== 'idle'));
+    btn.setAttribute('aria-busy', String(state === 'loading'));
+  }
+
+  // 새 곡을 넣고 재생한다. 재생이 막히면 버튼을 원래대로 돌린다
+  function startTrack(btn: HTMLButtonElement) {
+    audio.volume = 1;
+    audio.src = btn.dataset.src!;
+    const start = Number(btn.dataset.start ?? 0);
+    if (start > 0) {
+      audio.addEventListener('loadedmetadata', () => (audio.currentTime = start), { once: true });
+    }
+    audio.play().catch(() => {
+      if (current === btn) setState(btn, 'idle');
+    });
+  }
+
+  // 지금 소리를 FADE_MS 동안 서서히 줄이고, 다 줄면 done을 실행한다
+  function fadeOut(done: () => void) {
+    const startVolume = audio.volume;
+    const startTime = performance.now();
+    function step(now: number) {
+      const progress = Math.min((now - startTime) / FADE_MS, 1);
+      audio.volume = startVolume * (1 - progress);
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        audio.pause();
+        done();
+      }
+    }
+    requestAnimationFrame(step);
   }
 
   buttons.forEach((btn) => {
     btn.addEventListener('click', () => {
+      // 같은 버튼: 재생 ↔ 일시정지
       if (current === btn) {
-        audio.paused ? audio.play() : audio.pause();
+        if (audio.paused) {
+          audio.play().catch(() => setState(btn, 'idle'));
+        } else {
+          audio.pause();
+        }
         return;
       }
-      if (current) setLabel(current, false);
+
+      // 다른 버튼: 이전 버튼 원래대로, 새 버튼은 '불러오는 중'
+      if (current) setState(current, 'idle');
       current = btn;
-      audio.src = btn.dataset.src!;
-      // data-start가 있으면 그 초부터 재생 (하이라이트 버튼용)
-      const start = Number(btn.dataset.start ?? 0);
-      if (start > 0) {
-        audio.addEventListener('loadedmetadata', () => (audio.currentTime = start), { once: true });
+      setState(btn, 'loading');
+      const myId = ++switchId;
+
+      // 아무것도 안 나오고 있거나, 볼륨 조절이 안 되는 기기 → 기다리지 않고 바로 재생
+      if (audio.paused || !canFade) {
+        startTrack(btn);
+        return;
       }
-      audio.play();
+
+      // 나오고 있는 곡이 있으면 → 스르륵 줄인 뒤 새 곡 재생
+      fadeOut(() => {
+        if (myId === switchId) startTrack(btn); // 그 사이 다른 버튼을 눌렀으면 취소
+      });
     });
   });
 
-  audio.addEventListener('play', () => current && setLabel(current, true));
-  audio.addEventListener('pause', () => current && setLabel(current, false));
+  // 실제 소리 상태에 맞춰 버튼을 바꾼다
+  audio.addEventListener('playing', () => current && setState(current, 'playing'));
+  audio.addEventListener('waiting', () => current && setState(current, 'loading'));
+  audio.addEventListener('pause', () => current && setState(current, 'idle'));
+  audio.addEventListener('error', () => current && setState(current, 'idle'));
 </script>
 
 <style is:global>
