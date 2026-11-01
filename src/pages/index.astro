@@ -1,98 +1,40 @@
 ---
-// 곡 정보 파일을 불러온다
+import BaseLayout from '../layouts/BaseLayout.astro';
 import tracks from '../data/tracks.json';
 ---
 
-<html lang="ko">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Music Portfolio</title>
-  </head>
-  <body>
-    <main>
-      <h1>Music Portfolio</h1>
-      <p class="intro">독립영화를 위한 맞춤 스코어</p>
+<BaseLayout>
+  <h1>Music Portfolio</h1>
+  <p class="sub">독립영화를 위한 맞춤 스코어</p>
 
-      <ul class="track-list">
-        {tracks.map((track) => (
-          <li class="track">
-            <div class="info">
-              <h2>{track.title}</h2>
-              {track.emotion && <p class="tags">{track.emotion.join(' · ')}</p>}
-            </div>
-            <button
-              type="button"
-              class="play"
-              data-src={`/audio/${track.slug}.mp3`}
-              aria-label={`${track.title} 재생`}
-            >
-              ▶ 재생
-            </button>
-          </li>
-        ))}
-      </ul>
+  <ul class="track-list">
+    {tracks.map((track) => (
+      <li class="track">
+        <div>
+        <h2><a href={`/tracks/${track.slug}`}>{track.title}</a></h2>
+          {track.emotion && <p class="sub tags">{track.emotion.join(' · ')}</p>}
+        </div>
+        <button
+          type="button"
+          class="play"
+          data-src={`/audio/${track.slug}.mp3`}
+          aria-label={`${track.title} 재생`}
+        >
+          ▶ 재생
+        </button>
+      </li>
+    ))}
+  </ul>
+</BaseLayout>
 
-      <!-- 사이트 전체에서 하나만 쓰는 오디오 플레이어 (화면엔 안 보임) -->
-      <audio id="player" preload="none"></audio>
-    </main>
-  </body>
-</html>
-
-<script>
-  // 하나뿐인 플레이어와 모든 재생 버튼을 찾는다
-  const audio = document.querySelector<HTMLAudioElement>('#player')!;
-  const buttons = document.querySelectorAll<HTMLButtonElement>('.play');
-  let current: HTMLButtonElement | null = null; // 지금 선택된 곡의 버튼
-
-  // 버튼 글자를 '재생' 또는 '일시정지'로 바꾼다
-  function setLabel(btn: HTMLButtonElement, playing: boolean) {
-    btn.textContent = playing ? '❚❚ 일시정지' : '▶ 재생';
-    btn.setAttribute('aria-pressed', String(playing));
-  }
-
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      // 같은 곡 버튼을 다시 누르면: 재생 ↔ 일시정지
-      if (current === btn) {
-        audio.paused ? audio.play() : audio.pause();
-        return;
-      }
-      // 다른 곡을 누르면: 이전 버튼 원래대로, 새 곡으로 교체 후 재생
-      if (current) setLabel(current, false);
-      current = btn;
-      audio.src = btn.dataset.src!;
-      audio.play();
-    });
-  });
-
-  // 실제 재생 상태에 맞춰 버튼 글자를 바꾼다 (곡이 끝나면 자동으로 '재생'으로)
-  audio.addEventListener('play', () => current && setLabel(current, true));
-  audio.addEventListener('pause', () => current && setLabel(current, false));
-</script>
-
-<style is:global>
-  body {
-    margin: 0;
-    background: #0B0908;   /* 웜 블랙 배경 */
-    color: #F0E6D2;        /* 아이보리 글자 */
-    font-family: 'Noto Sans KR', sans-serif;
-  }
-  main {
-    max-width: 640px;
-    margin: 0 auto;
-    padding: 64px 24px;
-  }
-  .intro, .tags {
-    color: #A89C88;        /* 보조 글자색 */
-  }
+<style>
   .track-list {
     list-style: none;
     padding: 0;
     margin-top: 48px;
   }
   .track {
-    display: flex;                   /* 곡 정보와 버튼을 가로로 나란히 */
+    display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
@@ -107,21 +49,5 @@ import tracks from '../data/tracks.json';
   .tags {
     margin: 0;
     font-size: 0.9rem;
-  }
-  .play {
-    min-height: 44px;                /* 모바일 터치 영역 44px 이상 */
-    padding: 0 18px;
-    background: transparent;
-    color: #E8B04A;                  /* 앰버 골드 */
-    border: 1px solid #E8B04A;
-    border-radius: 999px;
-    font: inherit;
-    font-size: 0.9rem;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .play[aria-pressed="true"] {
-    background: #E8B04A;             /* 재생 중엔 채워진 버튼 */
-    color: #0B0908;
   }
 </style>

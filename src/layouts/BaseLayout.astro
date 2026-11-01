@@ -1,0 +1,95 @@
+---
+// 모든 페이지가 같이 쓰는 틀(액자)
+interface Props {
+  title?: string;
+}
+const { title = 'Music Portfolio' } = Astro.props;
+---
+
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <main>
+      <!-- 각 페이지의 내용이 여기 들어온다 -->
+      <slot />
+    </main>
+
+    <!-- 사이트 전체에서 하나만 쓰는 오디오 플레이어 -->
+    <audio id="player" preload="none"></audio>
+  </body>
+</html>
+
+<script>
+  const audio = document.querySelector<HTMLAudioElement>('#player')!;
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.play');
+  let current: HTMLButtonElement | null = null;
+
+  // 버튼에 원래 적혀 있던 글자를 기억해 둔다
+  buttons.forEach((btn) => (btn.dataset.label = btn.textContent?.trim() ?? ''));
+
+  function setLabel(btn: HTMLButtonElement, playing: boolean) {
+    btn.textContent = playing ? '❚❚ 일시정지' : btn.dataset.label!;
+    btn.setAttribute('aria-pressed', String(playing));
+  }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (current === btn) {
+        audio.paused ? audio.play() : audio.pause();
+        return;
+      }
+      if (current) setLabel(current, false);
+      current = btn;
+      audio.src = btn.dataset.src!;
+      // data-start가 있으면 그 초부터 재생 (하이라이트 버튼용)
+      const start = Number(btn.dataset.start ?? 0);
+      if (start > 0) {
+        audio.addEventListener('loadedmetadata', () => (audio.currentTime = start), { once: true });
+      }
+      audio.play();
+    });
+  });
+
+  audio.addEventListener('play', () => current && setLabel(current, true));
+  audio.addEventListener('pause', () => current && setLabel(current, false));
+</script>
+
+<style is:global>
+  body {
+    margin: 0;
+    background: #0B0908;
+    color: #F0E6D2;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 64px 24px;
+  }
+  a {
+    color: inherit;
+  }
+  .sub {
+    color: #A89C88;
+  }
+  .play {
+    min-height: 44px;
+    padding: 0 18px;
+    background: transparent;
+    color: #E8B04A;
+    border: 1px solid #E8B04A;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .play[aria-pressed="true"] {
+    background: #E8B04A;
+    color: #0B0908;
+  }
+</style>

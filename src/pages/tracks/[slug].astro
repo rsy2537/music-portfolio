@@ -1,0 +1,87 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import tracks from '../../data/tracks.json';
+
+// tracks.json에 있는 곡 수만큼 페이지를 만든다
+export function getStaticPaths() {
+  return tracks.map((track) => ({
+    params: { slug: track.slug },
+    props: { track },
+  }));
+}
+
+const { track } = Astro.props;
+
+// 초(72) → "1:12" 형태로 바꾼다
+function formatTime(sec: number) {
+  const m = Math.floor(sec / 60);
+  const s = String(Math.floor(sec % 60)).padStart(2, '0');
+  return `${m}:${s}`;
+}
+---
+
+<BaseLayout title={`${track.title} — Music Portfolio`}>
+  <a href="/" class="back sub">← 전체 곡</a>
+
+  <h1>{track.title}</h1>
+
+  <dl class="meta">
+    {track.emotion && (
+      <div><dt class="sub">감정</dt><dd>{track.emotion.join(' · ')}</dd></div>
+    )}
+    {track.sceneUse && (
+      <div><dt class="sub">장면 용도</dt><dd>{track.sceneUse.join(' · ')}</dd></div>
+    )}
+    {track.energy && (
+      <div><dt class="sub">에너지 곡선</dt><dd>{track.energy}</dd></div>
+    )}
+  </dl>
+
+  <div class="actions">
+    <button type="button" class="play" data-src={`/audio/${track.slug}.mp3`}>
+      ▶ 전체 듣기
+    </button>
+
+    {track.highlight && (
+      <button
+        type="button"
+        class="play"
+        data-src={`/audio/${track.slug}.mp3`}
+        data-start={track.highlight.start}
+      >
+        ▶ 하이라이트 ({formatTime(track.highlight.start)}~{formatTime(track.highlight.end)})
+      </button>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .back {
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  h1 {
+    margin: 32px 0 24px;
+  }
+  .meta {
+    margin: 0 0 40px;
+  }
+  .meta div {
+    display: flex;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid #2A2420;
+  }
+  .meta dt {
+    width: 96px;
+    flex-shrink: 0;
+  }
+  .meta dd {
+    margin: 0;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+</style>
