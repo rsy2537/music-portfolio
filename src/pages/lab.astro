@@ -1,0 +1,64 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Lab (테스트) | Music Portfolio"
+  description="모양 변신(MorphSVG) 테스트 페이지">
+  <h1>MorphSVG 테스트</h1>
+  <p class="sub">버튼을 누르면 네모 ↔ 동그라미로 변신해요.</p>
+
+  <svg class="lab-svg" viewBox="0 0 200 200" aria-hidden="true">
+    <path id="lab-shape" d="M 40 40 L 160 40 L 160 160 L 40 160 Z" />
+  </svg>
+
+  <!-- class="play"는 쓰지 않음 (목록 재생 버튼으로 잘못 연결되지 않게) -->
+  <button type="button" class="lab-btn" id="lab-go">변신</button>
+</BaseLayout>
+
+<script>
+  // GSAP와 모양 변신 도구(MorphSVG)를 불러와서 등록
+  import gsap from 'gsap';
+  import { MorphSVGPlugin } from 'gsap/MorphSVGPlugin';
+  gsap.registerPlugin(MorphSVGPlugin);
+
+  // 네모와 동그라미 모양 (SVG 선 경로)
+  const SQUARE = 'M 40 40 L 160 40 L 160 160 L 40 160 Z';
+  const CIRCLE = 'M 100 40 C 133 40 160 67 160 100 C 160 133 133 160 100 160 C 67 160 40 133 40 100 C 40 67 67 40 100 40 Z';
+
+  let round = false; // 지금 동그라미인지
+
+  document.getElementById('lab-go')?.addEventListener('click', () => {
+    round = !round;
+    gsap.to('#lab-shape', {
+      morphSVG: round ? CIRCLE : SQUARE,
+      duration: 1.2,          // 변신 시간 (초)
+      ease: 'power2.inOut',   // 천천히 출발 → 빨라짐 → 천천히 멈춤
+    });
+  });
+</script>
+
+<style>
+  .lab-svg {
+    display: block;
+    width: 240px;
+    height: 240px;
+    margin: 40px 0;
+  }
+  #lab-shape {
+    fill: none;
+    stroke: #E8B04A;
+    stroke-width: 3;
+    stroke-linejoin: round;
+  }
+  .lab-btn {
+    min-height: 44px;
+    padding: 0 22px;
+    background: transparent;
+    color: #E8B04A;
+    border: 1px solid #E8B04A;
+    border-radius: 999px;
+    font: inherit;
+    cursor: pointer;
+  }
+</style>
