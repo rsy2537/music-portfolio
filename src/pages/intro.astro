@@ -128,7 +128,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
       #050404 100%
     );
     color: #F0E6D2;
-    /* 위(제목) / 가운데(선+버튼) / 아래(소개) 세 칸 */
+    /* PC: 위(제목) / 가운데(선+버튼) / 아래(소개) 세 칸, 제목과 소개는 화면 위아래 끝으로 */
     display: grid;
     grid-template-rows: auto 1fr auto;
     padding: clamp(1.5rem, 4vh, 3rem) 0;
@@ -283,11 +283,14 @@ import '@fontsource/cormorant-garamond/500-italic.css';
 
   /* ---------- 심장 버튼 ---------- */
   .heart-btn {
+    /* 원 지름: 이 값 하나로 원과 안의 글씨 크기가 같이 정해짐 (폰은 아래 600px 이하 부분) */
+    --d: clamp(180px, 20vw, 280px);
+
     position: absolute;
     inset: 0;
     margin: auto;  /* 가운데 정렬 */
-    width: clamp(180px, 20vw, 280px);
-    height: clamp(180px, 20vw, 280px);
+    width: var(--d);
+    height: var(--d);
     border-radius: 50%;
     background: #16110D;  /* 어두운 불투명 원 */
     border: 1.5px solid rgba(240, 230, 210, 0.3);  /* 꺼져 있을 때의 흐린 테두리 */
@@ -301,22 +304,22 @@ import '@fontsource/cormorant-garamond/500-italic.css';
       box-shadow 0.35s ease;
   }
 
-  /* ----- 버튼 글자 (크기 키움) ----- */
+  /* ----- 버튼 글자: 원 지름(--d)에 비례해서 커짐 → 원 밖으로 넘치지 않음 ----- */
   .heart-label {
     position: relative;  /* 글자가 빛보다 위에 */
     z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.45rem;
+    gap: calc(var(--d) * 0.03);
     white-space: nowrap;  /* 어떤 화면에서도 두 줄로 꺾이지 않게 */
     -webkit-font-smoothing: antialiased;  /* 맥에서 글자를 더 또렷하게 */
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* 작은 안내 글씨: 고딕 대문자, 넓은 자간, 흐린 색 (13~15px) */
+  /* 작은 안내 글씨: 고딕 대문자, 넓은 자간, 흐린 색 (원 280px일 때 약 21px) */
   .heart-label-small {
-    font-size: clamp(0.8rem, 1vw, 0.95rem);
+    font-size: calc(var(--d) * 0.075);
     font-weight: 400;
     letter-spacing: 0.28em;
     padding-left: 0.28em;  /* 자간 때문에 생기는 오른쪽 쏠림을 가운데로 보정 */
@@ -325,12 +328,12 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     transition: color 0.35s ease;
   }
 
-  /* 주인공 글씨: 세리프 기울임체 (44~60px) */
+  /* 주인공 글씨: 세리프 기울임체 (원 280px일 때 약 84px) */
   .heart-label-main {
     font-family: 'Cormorant Garamond', 'Times New Roman', serif;
     font-style: italic;
     font-weight: 500;
-    font-size: clamp(2.75rem, 4.2vw, 3.75rem);
+    font-size: calc(var(--d) * 0.3);
     line-height: 1;
     letter-spacing: 0.01em;
   }
@@ -479,11 +482,15 @@ import '@fontsource/cormorant-garamond/500-italic.css';
   @media (max-width: 600px) {
     .intro {
       --ekg-w: 5px;
+      /* 폰: 제목·원·소개 문장을 한 덩어리로 모아 화면 가운데에, 사이 간격은 일정하게 */
+      grid-template-rows: auto auto auto;
+      align-content: center;
+      row-gap: clamp(2.5rem, 7vh, 4rem);
     }
     .heart-btn {
-      width: 136px;
-      height: 136px;
+      --d: 136px;
     }
+    /* 폰 글씨는 지금 크기 유지 (원에 비례 대신 직접 지정) */
     .heart-label {
       gap: 0.25rem;
     }
