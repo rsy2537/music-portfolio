@@ -8,6 +8,28 @@ import '@fontsource/cormorant-garamond/500-italic.css';
   title="Intro (테스트) | Music Portfolio"
   description="독립영화를 위한 맞춤 스코어">
   <section class="intro" id="intro">
+    <script is:inline>
+      // 건너뛰기 판단 (화면이 그려지기 전에 바로 실행 → 인트로가 잠깐 보였다 사라지는 깜빡임 없음)
+      (function () {
+        // 재방문자 자동 건너뜀 스위치. 인트로를 메인으로 교체할 때 true로 바꾼다
+        // (지금 켜면 테스트할 때마다 인트로가 건너뛰어져서 꺼 둠)
+        var AUTO_SKIP_RETURNING = false;
+
+        var intro = document.getElementById('intro');
+        var params = new URLSearchParams(location.search);
+        var seen = false;
+        try { seen = localStorage.getItem('intro-seen') === '1'; } catch (e) {}
+
+        // 주소 끝 ?skip = 건너뛴 화면 테스트용, ?intro = 재방문자여도 인트로 다시 보기
+        if (params.has('skip') || (AUTO_SKIP_RETURNING && seen && !params.has('intro'))) {
+          intro.classList.add('is-skipped', 'is-started');
+        }
+      })();
+    </script>
+
+    <!-- Skip 버튼: 오른쪽 아래. Tab을 누르면 가장 먼저 잡히도록 맨 앞에 둠 -->
+    <button type="button" class="skip-btn" id="intro-skip" aria-label="인트로 건너뛰기">Skip</button>
+
     <!-- 왼쪽 위: 제목. 항상 두 줄 -->
     <h1 class="intro-text" id="intro-title"><span class="line">독립영화를 위한</span> <span class="line">맞춤 스코어</span></h1>
     <script is:inline>
@@ -15,7 +37,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
       (function () {
         var title = document.getElementById('intro-title');
         var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (!title || reduce) return;
+        if (!title || reduce || title.closest('.is-skipped')) return;  // 건너뛴 상태면 타입온 안 함
 
         // 읽기 프로그램은 문장 전체로 읽음
         title.setAttribute('aria-label', title.textContent.replace(/\s+/g, ' ').trim());
@@ -88,8 +110,14 @@ import '@fontsource/cormorant-garamond/500-italic.css';
       <script is:inline>
         (function () {
           var btn = document.getElementById('intro-listen');
+          var skip = document.getElementById('intro-skip');
           var intro = document.getElementById('intro');
-          if (!btn) return;
+          if (!btn || !intro) return;
+
+          // "인트로 봤음" 기록 (재방문자 자동 건너뜀에 씀)
+          function markSeen() {
+            try { localStorage.setItem('intro-seen', '1'); } catch (e) {}
+          }
 
           // 폰은 마우스 올리기(호버)가 없어서, 누르는 순간 0.7초 동안 앰버 빛을 보여줌
           var timer;
@@ -101,11 +129,21 @@ import '@fontsource/cormorant-garamond/500-italic.css';
             }, 700);
           });
 
-          // 누르는 순간 "영화 시작" 표시 → 레터박스가 내려오고 제목·소개 문장이 사라짐
+          // 원을 누르는 순간 "영화 시작" 표시 → 레터박스가 내려오고 제목·소개 문장이 사라짐
           // (이 스크립트는 바로 실행되므로 아무리 일찍 눌러도 즉시 반응)
           btn.addEventListener('click', function () {
-            if (intro) intro.classList.add('is-started');
+            intro.classList.add('is-started');
+            markSeen();
           });
+
+          // Skip: 연출 없이 끝 상태로 바로 (음악은 틀지 않음. 원을 누르면 재생)
+          if (skip) {
+            skip.addEventListener('click', function () {
+              intro.classList.add('is-skipped', 'is-started');
+              markSeen();
+              btn.focus({ preventScroll: true });  // 키보드 사용자를 위해 초점을 원으로 옮김
+            });
+          }
         })();
       </script>
       <script>
@@ -133,7 +171,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
       </script>
     </div>
 
-    <!-- 아래: 왼쪽 소개 문장 (오른쪽 아래는 나중에 Skip 버튼 자리) -->
+    <!-- 아래: 왼쪽 소개 문장 -->
     <div class="intro-bottom">
       <p class="intro-sub">
         <span class="line">장면의 박동에 맞춰</span>
@@ -151,8 +189,11 @@ import '@fontsource/cormorant-garamond/500-italic.css';
   .intro {
     /* EKG 굵기: 이 숫자 하나로 조절 (폰은 아래 600px 이하 부분) */
     --ekg-w: 4px;
-    /* 레터박스가 내려오는 시간: 느낌에 따라 조절 (예: 0.9s, 1.6s) */
+    /* 레터박스가 내려오는 시간: 느낌에 따라 조절 */
     --lb-time: 2.5s;
+    /* 연출 빨리 감기: 평소 0초. 건너뛰면 5.2초 → 모든 연출 시간표가 5.2초 앞당겨져서
+       첫 박동은 이미 끝난 상태, 반복 박동만 바로 시작 */
+    --skip: 0s;
 
     position: fixed;
     inset: 0;
@@ -172,6 +213,10 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     overflow: hidden;
   }
 
+  .intro:global(.is-skipped) {
+    --skip: 5.2s;
+  }
+
   /* 필름 노이즈: 옅고 고운 입자. 움직이지 않음. 진하기는 opacity로 (0.05 ~ 0.14) */
   .intro::after {
     content: '';
@@ -181,6 +226,43 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  2.2 0 0 0 -0.95'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
     background-size: 160px 160px;
     opacity: 0.08;
+  }
+
+  /* ---------- Skip 버튼 (오른쪽 아래) ---------- */
+  .skip-btn {
+    position: absolute;
+    right: clamp(1.5rem, 4vw, 3.5rem);
+    bottom: clamp(1.5rem, 4vh, 3rem);
+    z-index: 2;
+    min-width: 44px;   /* 터치 영역 44px 이상 */
+    min-height: 44px;
+    padding: 0 0 0 0.28em;  /* 자간 때문에 생기는 오른쪽 쏠림 보정 */
+    background: none;
+    border: 0;
+    color: #A89C88;
+    font: inherit;
+    font-size: 0.8rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.3s ease, opacity 0.4s ease, visibility 0.4s;
+  }
+
+  .skip-btn:hover,
+  .skip-btn:focus-visible {
+    color: #E8B04A;
+  }
+
+  .skip-btn:focus-visible {
+    outline: 2px solid #E8B04A;
+    outline-offset: 4px;
+  }
+
+  /* 영화가 시작되면(원 클릭 또는 Skip) Skip 버튼은 사라짐 */
+  .intro:global(.is-started) .skip-btn {
+    opacity: 0;
+    visibility: hidden;
   }
 
   /* ---------- 왼쪽 위 제목 ---------- */
@@ -245,12 +327,13 @@ import '@fontsource/cormorant-garamond/500-italic.css';
        약 3.6초: 원에 닿음 → 원이 하얀 빛으로 켜짐 + 링 2개 + 선이 살짝 밝아진 채로 남음
      [그다음부터 계속, 5초마다]
        5.2초부터: 흐린 빛이 계속 흘러옴 → 도착할 때마다(한 바퀴의 약 57%) 원이 하얗게 부풀었다가 가라앉음
-     더 느린 심장을 원하면 아래 "5s"를 전부 같은 숫자로 (예: 6s) */
+     더 느린 심장을 원하면 아래 "5s"를 전부 같은 숫자로 (예: 6s)
+     모든 시작 시간은 "calc(X초 - var(--skip))" 형태: 건너뛰면 --skip만큼 앞당겨짐 */
 
   /* 바탕선: 처음엔 거의 안 보이다가, 첫 박동 뒤 살짝 밝아진 채로 남음 */
   .ekg-base {
     opacity: 0.08;
-    animation: line-charge 1.2s ease-out 3.5s forwards;
+    animation: line-charge 1.2s ease-out calc(3.5s - var(--skip)) forwards;
   }
 
   @keyframes line-charge {
@@ -262,24 +345,24 @@ import '@fontsource/cormorant-garamond/500-italic.css';
   .ekg-tail-1 {
     stroke-dasharray: 0.02 2;
     animation:
-      tail-1 3.6s linear 0.8s both,
-      head-grow 3.6s linear 0.8s both,
-      tail-1-loop 5s linear 5.2s infinite,
-      head-grow-loop 5s linear 5.2s infinite;
+      tail-1 3.6s linear calc(0.8s - var(--skip)) both,
+      head-grow 3.6s linear calc(0.8s - var(--skip)) both,
+      tail-1-loop 5s linear calc(5.2s - var(--skip)) infinite,
+      head-grow-loop 5s linear calc(5.2s - var(--skip)) infinite;
   }
   .ekg-tail-2 {
     stroke-dasharray: 0.06 2;
     opacity: 0.35;
     animation:
-      tail-2 3.6s linear 0.8s both,
-      tail-2-loop 5s linear 5.2s infinite;
+      tail-2 3.6s linear calc(0.8s - var(--skip)) both,
+      tail-2-loop 5s linear calc(5.2s - var(--skip)) infinite;
   }
   .ekg-tail-3 {
     stroke-dasharray: 0.14 2;
     opacity: 0.12;
     animation:
-      tail-3 3.6s linear 0.8s both,
-      tail-3-loop 5s linear 5.2s infinite;
+      tail-3 3.6s linear calc(0.8s - var(--skip)) both,
+      tail-3-loop 5s linear calc(5.2s - var(--skip)) infinite;
   }
 
   /* 첫 박동: 3.6초 동안 한 번 지나감 */
@@ -305,8 +388,8 @@ import '@fontsource/cormorant-garamond/500-italic.css';
   /* 원에 가까워질수록 빛 전체가 밝아짐 (반복 박동은 첫 박동보다 흐리게) */
   .comet {
     animation:
-      comet-bright 3.6s linear 0.8s both,
-      comet-bright-loop 5s linear 5.2s infinite;
+      comet-bright 3.6s linear calc(0.8s - var(--skip)) both,
+      comet-bright-loop 5s linear calc(5.2s - var(--skip)) infinite;
   }
 
   @keyframes comet-bright {
@@ -387,8 +470,8 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     pointer-events: none;
     transition: opacity 0.35s ease;
     animation:
-      heart-on 1.6s ease-out 3.6s both,
-      heart-pulse 5s linear 5.2s infinite;
+      heart-on 1.6s ease-out calc(3.6s - var(--skip)) both,
+      heart-pulse 5s linear calc(5.2s - var(--skip)) infinite;
   }
 
   @keyframes heart-on {
@@ -443,6 +526,11 @@ import '@fontsource/cormorant-garamond/500-italic.css';
 
   .heart-ring-1 { animation: ring-1 2s ease-out 3.6s forwards; }
   .heart-ring-2 { animation: ring-2 2s ease-out 4s forwards; }
+
+  /* 건너뛴 상태에서는 첫 박동 링이 나오지 않게 */
+  .intro:global(.is-skipped) .heart-ring {
+    display: none;
+  }
 
   @keyframes ring-1 {
     from { opacity: 0.5; transform: scale(1); }
@@ -518,16 +606,16 @@ import '@fontsource/cormorant-garamond/500-italic.css';
   /* ---------- 레터박스 (위아래 검은 띠) ----------
      PC: 가운데가 영화 와이드 비율(2.39:1)이 되도록 띠 높이를 자동 계산.
          아주 넓은 모니터에서도 띠가 보이게 최소 화면 높이의 5%
-     폰 세로 화면: 화면 높이의 9%로 고정 (아래 세로 화면 부분) */
-    .letterbox {
+     폰 세로 화면: --lb-phone으로 고정 (아래 세로 화면 부분) */
+  .letterbox {
     /* 띠 안쪽 끝의 가는 선 색: 진하게 하려면 마지막 숫자를 올림 (0.1 ~ 0.3) */
     --lb-edge: rgba(240, 230, 210, 0.18);
 
     position: absolute;
     left: 0;
     right: 0;
-    height: max(10vh, calc((100vh - 100vw / 2.39) / 2));
-    height: max(10dvh, calc((100dvh - 100vw / 2.39) / 2));  /* 폰 주소창 높이까지 고려 (지원하는 브라우저만) */
+    height: max(10vh calc((100vh - 100vw / 2.39) / 2));
+    height: max(10vh, calc((100dvh - 100vw / 2.39) / 2));  /* 폰 주소창 높이까지 고려 (지원하는 브라우저만) */
     background: #000;
     pointer-events: none;
     transition: transform var(--lb-time) cubic-bezier(0.65, 0, 0.35, 1);  /* 천천히 출발 → 빨라짐 → 천천히 멈춤 */
@@ -560,7 +648,15 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     opacity: 0;
   }
 
-    /* 세로 화면(폰 등): 띠 높이를 화면 높이의 비율로 고정 (PC는 위의 자동 계산 그대로)
+  /* 건너뛴 상태: 띠·글자·Skip 버튼이 움직임 없이 바로 끝 모습으로 */
+  .intro:global(.is-skipped) .letterbox,
+  .intro:global(.is-skipped) .intro-text,
+  .intro:global(.is-skipped) .intro-sub,
+  .intro:global(.is-skipped) .skip-btn {
+    transition: none;
+  }
+
+  /* 세로 화면(폰 등): 띠 높이를 화면 높이의 비율로 고정 (PC는 위의 자동 계산 그대로)
      두께 조절은 --lb-phone 숫자 하나로 (예: 13.5 = 1.5배, 18 = 2배) */
   @media (max-aspect-ratio: 1/1) {
     .letterbox {
@@ -617,10 +713,11 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     .heart-btn {
       transition: none;
     }
-    /* 레터박스·글자도 움직임 없이 바로 바뀜 */
+    /* 레터박스·글자·Skip 버튼도 움직임 없이 바로 바뀜 */
     .letterbox,
     .intro-text,
-    .intro-sub {
+    .intro-sub,
+    .skip-btn {
       transition: none;
     }
   }
