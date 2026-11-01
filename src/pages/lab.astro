@@ -4,16 +4,64 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <BaseLayout
   title="Lab (테스트) | Music Portfolio"
-  description="모양 변신(MorphSVG) 테스트 페이지">
-  <h1>MorphSVG 테스트</h1>
-  <p class="sub">버튼을 누르면 네모 ↔ 동그라미로 변신해요.</p>
+  description="EKG 선 → 가지 변신 실험 페이지">
+  <h1>EKG → 가지 변신 실험</h1>
+  <p class="sub">버튼을 누르면 변신하고, 다시 누르면 되감겨요.</p>
 
-  <svg class="lab-svg" viewBox="0 0 200 200" aria-hidden="true">
-    <path id="lab-shape" d="M 40 40 L 160 40 L 160 160 L 40 160 Z" />
-  </svg>
+  <div class="lab-wide">
+    <svg class="lab-svg" viewBox="0 0 1200 340" aria-hidden="true">
+      <!-- 큰 가지: 처음엔 EKG 선 모양 → 가지로 변신 (오른쪽은 왼쪽 선을 좌우로 뒤집은 좌표) -->
+      <path
+        id="lab-ekg-l"
+        class="lab-line"
+        d="M 0 170 L 290 170 C 296 170, 299 152, 304 152 C 309 152, 312 170, 318 170 L 334 170 L 342 182 L 358 20 L 376 320 L 388 170 L 404 170 C 411 170, 415 142, 424 142 C 433 142, 437 170, 444 170 L 600 170"
+      />
+      <path
+        id="lab-ekg-r"
+        class="lab-line"
+        d="M 1200 170 L 910 170 C 904 170, 901 152, 896 152 C 891 152, 888 170, 882 170 L 866 170 L 858 182 L 842 20 L 824 320 L 812 170 L 796 170 C 789 170, 785 142, 776 142 C 767 142, 763 170, 756 170 L 600 170"
+      />
 
-  <!-- class="play"는 쓰지 않음 (목록 재생 버튼으로 잘못 연결되지 않게) -->
-  <button type="button" class="lab-btn" id="lab-go">변신</button>
+      <!-- 잔가지: 큰 가지 중간에서 갈라져 나와 노드로 (처음엔 안 보임, 그려지듯 나타남) -->
+      <path class="lab-twig" pathLength="1" d="M 444 176 C 400 140, 364 100, 330 70" />
+      <path class="lab-twig" pathLength="1" d="M 410 182 C 376 220, 352 250, 330 274" />
+      <path class="lab-twig" pathLength="1" d="M 704 180 C 760 140, 820 100, 870 84" />
+
+      <!-- 가운데 하얀 점 (심장) -->
+      <circle class="lab-heart" cx="600" cy="170" r="7" />
+
+      <!-- 곡 노드: 앰버 점 (나타나는 순서대로 적음: 큰 가지 끝 → 잔가지 끝) -->
+      <circle class="lab-dot" cx="170" cy="174" r="9" />
+      <circle class="lab-dot" cx="950" cy="254" r="9" />
+      <circle class="lab-dot" cx="330" cy="70" r="9" />
+      <circle class="lab-dot" cx="330" cy="274" r="9" />
+      <circle class="lab-dot" cx="870" cy="84" r="9" />
+
+      <!-- 곡 제목 + 감정 키워드 (점과 같은 순서) -->
+      <g class="lab-label">
+        <text class="lab-title" x="144" y="164" text-anchor="end">출정의 밤</text>
+        <text class="lab-kw" x="144" y="198" text-anchor="end">긴장 · 불안</text>
+      </g>
+      <g class="lab-label">
+        <text class="lab-title" x="976" y="250">여운의 끝</text>
+        <text class="lab-kw" x="976" y="284">그리움 · 상실</text>
+      </g>
+      <g class="lab-label">
+        <text class="lab-title" x="304" y="60" text-anchor="end">포효</text>
+        <text class="lab-kw" x="304" y="94" text-anchor="end">긴장</text>
+      </g>
+      <g class="lab-label">
+        <text class="lab-title" x="304" y="274" text-anchor="end">겨울의 잔상</text>
+        <text class="lab-kw" x="304" y="308" text-anchor="end">따뜻함 · 회상</text>
+      </g>
+      <g class="lab-label">
+        <text class="lab-title" x="896" y="74">햇살이 머무는 자리</text>
+        <text class="lab-kw" x="896" y="108">따뜻함 · 그리움</text>
+      </g>
+    </svg>
+  </div>
+
+  <button type="button" class="lab-btn" id="lab-go">▶ 변신</button>
 </BaseLayout>
 
 <script>
@@ -22,35 +70,102 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   import { MorphSVGPlugin } from 'gsap/MorphSVGPlugin';
   gsap.registerPlugin(MorphSVGPlugin);
 
-  // 네모와 동그라미 모양 (SVG 선 경로)
-  const SQUARE = 'M 40 40 L 160 40 L 160 160 L 40 160 Z';
-  const CIRCLE = 'M 100 40 C 133 40 160 67 160 100 C 160 133 133 160 100 160 C 67 160 40 133 40 100 C 40 67 67 40 100 40 Z';
+  // 큰 가지 도착 모양 (EKG 선과 같은 방향: 바깥 노드 → 가운데 점)
+  const BRANCH_L = 'M 170 174 C 350 190, 480 170, 600 170';
+  const BRANCH_R = 'M 950 254 C 820 240, 720 170, 600 170';
 
-  let round = false; // 지금 동그라미인지
+  // ===== 연출 숫자 (느낌에 따라 조절) =====
+  const MORPH_TIME = 1.5;   // EKG → 큰 가지 변신 시간 (초)
+  const TWIG_START = 0.9;   // 잔가지가 그려지기 시작 (초)
+  const TWIG_TIME = 0.7;    // 잔가지 하나가 다 그려지는 시간 (초)
+  const NODE_START = 1.2;   // 노드가 피어나기 시작 (초)
+  const NODE_GAP = 0.12;    // 노드 사이 간격 (초)
 
-  document.getElementById('lab-go')?.addEventListener('click', () => {
-    round = !round;
-    gsap.to('#lab-shape', {
-      morphSVG: round ? CIRCLE : SQUARE,
-      duration: 1.2,          // 변신 시간 (초)
-      ease: 'power2.inOut',   // 천천히 출발 → 빨라짐 → 천천히 멈춤
-    });
+  // 처음부터 끝까지 한 줄로 이어진 연출 (멈춘 상태로 준비)
+  const tl = gsap.timeline({ paused: true });
+  tl.to('#lab-ekg-l', { morphSVG: BRANCH_L, duration: MORPH_TIME, ease: 'power2.inOut' }, 0)
+    .to('#lab-ekg-r', { morphSVG: BRANCH_R, duration: MORPH_TIME, ease: 'power2.inOut' }, 0)
+    .to('.lab-line', { opacity: 0.9, duration: MORPH_TIME }, 0)
+    .fromTo('.lab-twig',
+      { strokeDashoffset: 1 },
+      { strokeDashoffset: 0, duration: TWIG_TIME, ease: 'power1.out', stagger: 0.15 },
+      TWIG_START)
+    .fromTo('.lab-dot',
+      { scale: 0, opacity: 0, transformOrigin: '50% 50%' },
+      { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(2)', stagger: NODE_GAP },
+      NODE_START)
+    .fromTo('.lab-label',
+      { opacity: 0 },
+      { opacity: 1, duration: 0.6, ease: 'power1.out', stagger: NODE_GAP },
+      NODE_START + 0.15);
+
+  // 버튼: 누를 때마다 변신 ↔ 되감기
+  const btn = document.getElementById('lab-go');
+  let forward = false;
+  btn?.addEventListener('click', () => {
+    forward = !forward;
+    if (forward) {
+      tl.play();
+    } else {
+      tl.reverse();
+    }
+    if (btn) btn.textContent = forward ? '◀ 되감기' : '▶ 변신';
   });
 </script>
 
 <style>
+  /* 실험 그림은 화면 폭 전체를 씀 (기본 틀은 폭 640px로 좁아서) */
+  .lab-wide {
+    width: 100vw;
+    margin: 40px 0 32px calc(50% - 50vw);
+  }
   .lab-svg {
     display: block;
-    width: 240px;
-    height: 240px;
-    margin: 40px 0;
+    width: 100%;
+    max-width: 1200px;
+    height: auto;
+    margin: 0 auto;
   }
-  #lab-shape {
+
+  /* 큰 가지 (처음엔 EKG 선) */
+  .lab-line {
+    fill: none;
+    stroke: #E8B04A;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.35;
+  }
+
+  /* 잔가지: pathLength 1 기준으로 처음엔 다 숨김 (그려지듯 나타남) */
+  .lab-twig {
     fill: none;
     stroke: #E8B04A;
     stroke-width: 3;
-    stroke-linejoin: round;
+    stroke-linecap: round;
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 1;
+    opacity: 0.8;
   }
+
+  .lab-heart {
+    fill: #F0E6D2;
+  }
+
+  .lab-dot {
+    fill: #E8B04A;
+  }
+
+  .lab-title {
+    fill: #F0E6D2;
+    font-size: 26px;
+    font-weight: 500;
+  }
+  .lab-kw {
+    fill: #A89C88;
+    font-size: 18px;
+  }
+
   .lab-btn {
     min-height: 44px;
     padding: 0 22px;
