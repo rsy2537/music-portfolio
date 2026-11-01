@@ -24,11 +24,6 @@ import '@fontsource/cormorant-garamond/500-italic.css';
         if (params.has('skip') || (AUTO_SKIP_RETURNING && seen && !params.has('intro'))) {
           intro.classList.add('is-skipped', 'is-started');
         }
-
-        // 주소 끝 ?clef = 높은음자리표 위치·크기 미리보기 (B-2 확인용)
-        if (params.has('clef')) {
-          intro.classList.add('show-clef');
-        }
       })();
     </script>
 
@@ -97,19 +92,12 @@ import '@fontsource/cormorant-garamond/500-italic.css';
               <use href="#ekg-half" class="ekg-tail ekg-tail-1" />
             </g>
           </g>
-
-          <!-- 높은음자리표 (변신의 도착 모양). 확정 초안(viewBox 0 0 200 340)의 x 좌표에 +500 → 가로 틀 가운데.
-               아래 고리 중심 (600, 196), 반지름 48. 평소엔 숨김, B-3에서 원이 이 모양으로 변신 -->
-          <path
-            id="clef"
-            class="clef"
-            d="M 582 302 C 576 316, 584 330, 595 329 C 605 328, 607 318, 606 306 C 604 236, 595 116, 592 48 C 590 26, 598 10, 607 10 C 618 10, 625 24, 623 42 C 621 66, 598 88, 582 106 C 564 128, 552 164, 552 196 C 552 222.5, 573.5 244, 600 244 C 626.5 244, 648 222.5, 648 196 C 648 169.5, 626.5 148, 600 148 C 582 148, 572 162, 574 178 C 576 194, 592 202, 606 196 C 616 191, 616 176, 606 172 C 598 169, 592 178, 598 184"
-          />
         </svg>
       </div>
 
       <!-- 심장 버튼: 첫 박동에 하얀 빛으로 켜지고, 이후 박동마다 하얗게 부풂.
-           마우스 올림 / 누름 / 키보드 선택 시에는 앰버 빛으로 바뀜 -->
+           마우스 올림 / 누름 / 키보드 선택 시에는 앰버 빛으로 바뀜.
+           누르면 작은 빛나는 점(심장)으로 줄어듦 -->
       <button type="button" class="heart-btn" id="intro-listen">
         <span class="heart-glow" aria-hidden="true"></span>
         <span class="heart-ring heart-ring-1" aria-hidden="true"></span>
@@ -142,14 +130,14 @@ import '@fontsource/cormorant-garamond/500-italic.css';
             }, 700);
           });
 
-          // 원을 누르는 순간 "영화 시작" 표시 → 레터박스가 내려오고 제목·소개 문장이 사라짐
-          // (이 스크립트는 바로 실행되므로 아무리 일찍 눌러도 즉시 반응)
+          // 원을 누르는 순간 "영화 시작" 표시 → 레터박스가 내려오고, 제목·소개 문장이 사라지고,
+          // 원이 작은 점으로 줄어듦 (이 스크립트는 바로 실행되므로 아무리 일찍 눌러도 즉시 반응)
           btn.addEventListener('click', function () {
             intro.classList.add('is-started');
             markSeen();
           });
 
-          // Skip: 연출 없이 끝 상태로 바로 (음악은 틀지 않음. 원을 누르면 재생)
+          // Skip: 연출 없이 끝 상태로 바로 (음악은 틀지 않음. 점을 누르면 재생)
           if (skip) {
             skip.addEventListener('click', function () {
               intro.classList.add('is-skipped', 'is-started');
@@ -172,12 +160,12 @@ import '@fontsource/cormorant-garamond/500-italic.css';
 
         if (btn && first) {
           btn.addEventListener('click', () => {
-            if (started) return; // 이미 재생 중이면 무시 (B단계부터 이 버튼은 변신해서 사라짐)
+            if (started) return; // 이미 재생 중이면 무시
             started = true;
             toggleTrack(btn, `/audio/${first.slug}.mp3`, 0, (state) => {
               btn.dataset.state = state; // 나중에 '불러오는 중' 모양을 줄 때 쓸 표시
               btn.setAttribute('aria-busy', String(state === 'loading'));
-              if (state === 'idle') started = false; // 재생이 막혔거나 곡이 끝나면 다시 누를 수 있게
+              if (state === 'idle') started = false; // 재생이 막혔거나 곡이 끝나면 점을 다시 눌러 재생 가능
             });
           });
         }
@@ -200,10 +188,13 @@ import '@fontsource/cormorant-garamond/500-italic.css';
 
 <style>
   .intro {
-    /* EKG 굵기: 이 숫자 하나로 조절 (폰은 아래 600px 이하 부분). 높은음자리표도 같은 굵기 */
+    /* EKG 굵기: 이 숫자 하나로 조절 (폰은 아래 600px 이하 부분) */
     --ekg-w: 4px;
     /* 레터박스가 내려오는 시간: 느낌에 따라 조절 */
     --lb-time: 2.5s;
+    /* 원이 작은 점으로 줄어드는 시간, 점 크기 (폰 점 크기는 아래 600px 이하 부분) */
+    --dot-time: 1.5s;
+    --dot-d: 14px;
     /* 연출 빨리 감기: 평소 0초. 건너뛰면 5.2초 → 모든 연출 시간표가 5.2초 앞당겨져서
        첫 박동은 이미 끝난 상태, 반복 박동만 바로 시작 */
     --skip: 0s;
@@ -334,24 +325,6 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     stroke-linejoin: round;
   }
 
-  /* ---------- 높은음자리표 (B-3에서 원이 이 모양으로 변신) ----------
-     평소엔 숨김. 주소 끝 ?clef 로 열면 보임 (원 버튼은 반투명 → 고리와 크기 비교) */
-  .clef {
-    fill: none;
-    stroke: #E8B04A;
-    stroke-width: var(--ekg-w);
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    opacity: 0;
-  }
-
-  .intro:global(.show-clef) .clef {
-    opacity: 1;
-  }
-  .intro:global(.show-clef) .heart-btn {
-    opacity: 0.35;
-  }
-
   /* ===== 연출 시간표 =====
      [첫 박동, 한 번만]
        0.8초: 양쪽 끝에서 밝은 빛 출발
@@ -439,7 +412,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
 
     position: absolute;
     inset: 0;
-    margin: auto;  /* 가운데 정렬 */
+    margin: auto;  /* 가운데 정렬 (작은 점으로 줄어들어도 가운데 그대로) */
     width: var(--d);
     height: var(--d);
     border-radius: 50%;
@@ -466,6 +439,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     white-space: nowrap;  /* 어떤 화면에서도 두 줄로 꺾이지 않게 */
     -webkit-font-smoothing: antialiased;  /* 맥에서 글자를 더 또렷하게 */
     -moz-osx-font-smoothing: grayscale;
+    transition: opacity 0.3s ease;
   }
 
   /* 작은 안내 글씨: 고딕 대문자, 넓은 자간, 흐린 색 (원 280px일 때 약 21px) */
@@ -619,6 +593,38 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     transform: scale(0.97);
   }
 
+  /* ===== 원 → 작은 빛나는 점 (클릭 뒤 / 건너뛴 뒤) =====
+     글자가 먼저 사라지고, 원이 --dot-d 크기로 줄어든 뒤, 안쪽이 아이보리로 채워져 하얀 점이 됨.
+     박동(빛 도착 때 반짝임)은 그대로 이어짐. 앰버 호버 빛보다 우선하도록 이 부분은 앰버 부분보다 아래에 둠 */
+  .intro:global(.is-started) .heart-btn {
+    --d: var(--dot-d);
+    background-color: #F0E6D2;
+    border-color: #F0E6D2;
+    box-shadow: none;
+    transition:
+      width var(--dot-time) cubic-bezier(0.65, 0, 0.35, 1) 0.15s,
+      height var(--dot-time) cubic-bezier(0.65, 0, 0.35, 1) 0.15s,
+      background-color 0.5s ease calc(var(--dot-time) * 0.6),
+      border-color 0.5s ease calc(var(--dot-time) * 0.6),
+      box-shadow 0.35s ease;
+  }
+
+  .intro:global(.is-started) .heart-label {
+    opacity: 0;
+  }
+
+  /* 점 주변 빛 번짐: 원일 때보다 작게 (0.4 ~ 1로 조절) */
+  .intro:global(.is-started) .heart-glow {
+    opacity: 0.6;
+  }
+
+  /* 건너뛴 상태: 처음부터 작은 점 (움직임 없이) */
+  .intro:global(.is-skipped) .heart-btn,
+  .intro:global(.is-skipped) .heart-label,
+  .intro:global(.is-skipped) .heart-glow {
+    transition: none;
+  }
+
   /* ---------- 아래: 소개 문장 ---------- */
   .intro-bottom {
     padding: 0 clamp(1.5rem, 4vw, 3.5rem);
@@ -701,6 +707,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
   @media (max-width: 600px) {
     .intro {
       --ekg-w: 5px;
+      --dot-d: 12px;
       /* 폰: 제목·원·소개 문장을 한 덩어리로 모아 화면 가운데에, 사이 간격은 일정하게 */
       grid-template-rows: auto auto auto;
       align-content: center;
@@ -744,11 +751,13 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     .heart-btn {
       transition: none;
     }
-    /* 레터박스·글자·Skip 버튼도 움직임 없이 바로 바뀜 */
+    /* 레터박스·글자·Skip 버튼·원 → 점 변화도 움직임 없이 바로 바뀜 */
     .letterbox,
     .intro-text,
     .intro-sub,
-    .skip-btn {
+    .skip-btn,
+    .intro:global(.is-started) .heart-btn,
+    .intro:global(.is-started) .heart-label {
       transition: none;
     }
   }
