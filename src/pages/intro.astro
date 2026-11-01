@@ -6,25 +6,32 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   title="Intro (테스트) | Music Portfolio"
   description="독립영화를 위한 맞춤 스코어">
   <section class="intro">
-    <h1 class="intro-text" id="intro-title">독립영화를 위한 맞춤 스코어</h1>
+    <!-- 두 덩어리로 나눠서, 좁은 화면에서는 반드시 덩어리 사이에서만 줄바꿈 -->
+    <h1 class="intro-text" id="intro-title"><span class="line">독립영화를 위한</span> <span class="line">맞춤 스코어</span></h1>
     <script is:inline>
-      // 타입온: 제목을 한 글자씩 span으로 나눠 차례로 나타나게 함 (한 번만)
+      // 타입온: 덩어리(.line)마다 글자를 span으로 나눠 차례로 나타나게 함 (한 번만)
       (function () {
         var title = document.getElementById('intro-title');
         var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (!title || reduce) return;
 
-        var text = title.textContent.trim();
-        title.setAttribute('aria-label', text);
-        title.textContent = '';
+        // 읽기 프로그램은 문장 전체로 읽음
+        title.setAttribute('aria-label', title.textContent.replace(/\s+/g, ' ').trim());
 
-        Array.from(text).forEach(function (ch, i) {
-          var span = document.createElement('span');
-          span.className = 'char';
-          span.textContent = ch;
-          span.setAttribute('aria-hidden', 'true');
-          span.style.animationDelay = (300 + i * 140) + 'ms';  // 글자마다 0.14초 간격
-          title.appendChild(span);
+        var i = 0;
+        title.querySelectorAll('.line').forEach(function (line) {
+          var text = line.textContent;
+          line.textContent = '';
+          Array.from(text).forEach(function (ch) {
+            var span = document.createElement('span');
+            span.className = 'char';
+            span.textContent = ch;
+            span.setAttribute('aria-hidden', 'true');
+            span.style.animationDelay = (300 + i * 140) + 'ms';  // 글자마다 0.14초 간격
+            line.appendChild(span);
+            i++;
+          });
+          i++;  // 덩어리 사이에서 한 박자 쉼
         });
       })();
     </script>
@@ -74,6 +81,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     line-height: 1.2;
     letter-spacing: -0.02em;
     word-break: keep-all;
+  }
+
+  /* 덩어리 하나는 통째로 한 줄. 줄바꿈은 덩어리 사이에서만 일어남 */
+  .line {
+    display: inline-block;
   }
 
   /* 타입온: 한 글자씩 써지고 그대로 머묾 (반복 없음) */
