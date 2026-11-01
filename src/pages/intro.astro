@@ -7,7 +7,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
 <BaseLayout
   title="Intro (테스트) | Music Portfolio"
   description="독립영화를 위한 맞춤 스코어">
-  <section class="intro">
+  <section class="intro" id="intro">
     <!-- 왼쪽 위: 제목. 항상 두 줄 -->
     <h1 class="intro-text" id="intro-title"><span class="line">독립영화를 위한</span> <span class="line">맞춤 스코어</span></h1>
     <script is:inline>
@@ -86,10 +86,12 @@ import '@fontsource/cormorant-garamond/500-italic.css';
         </span>
       </button>
       <script is:inline>
-        // 폰은 마우스 올리기(호버)가 없어서, 누르는 순간 0.7초 동안 앰버 빛을 보여줌
         (function () {
           var btn = document.getElementById('intro-listen');
+          var intro = document.getElementById('intro');
           if (!btn) return;
+
+          // 폰은 마우스 올리기(호버)가 없어서, 누르는 순간 0.7초 동안 앰버 빛을 보여줌
           var timer;
           btn.addEventListener('pointerdown', function () {
             btn.classList.add('is-pressed');
@@ -97,6 +99,12 @@ import '@fontsource/cormorant-garamond/500-italic.css';
             timer = setTimeout(function () {
               btn.classList.remove('is-pressed');
             }, 700);
+          });
+
+          // 누르는 순간 "영화 시작" 표시 → 레터박스가 내려오고 제목·소개 문장이 사라짐
+          // (이 스크립트는 바로 실행되므로 아무리 일찍 눌러도 즉시 반응)
+          btn.addEventListener('click', function () {
+            if (intro) intro.classList.add('is-started');
           });
         })();
       </script>
@@ -132,6 +140,10 @@ import '@fontsource/cormorant-garamond/500-italic.css';
         <span class="line">음악을 씁니다.</span>
       </p>
     </div>
+
+    <!-- 레터박스: 위아래 검은 띠. 처음엔 화면 밖에 숨어 있다가 원을 누르면 내려옴 -->
+    <div class="letterbox letterbox-top" aria-hidden="true"></div>
+    <div class="letterbox letterbox-bottom" aria-hidden="true"></div>
   </section>
 </BaseLayout>
 
@@ -139,6 +151,8 @@ import '@fontsource/cormorant-garamond/500-italic.css';
   .intro {
     /* EKG 굵기: 이 숫자 하나로 조절 (폰은 아래 600px 이하 부분) */
     --ekg-w: 4px;
+    /* 레터박스가 내려오는 시간: 느낌에 따라 조절 (예: 0.9s, 1.6s) */
+    --lb-time: 1.2s;
 
     position: fixed;
     inset: 0;
@@ -501,6 +515,59 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     word-break: keep-all;
   }
 
+  /* ---------- 레터박스 (위아래 검은 띠) ----------
+     PC: 가운데가 영화 와이드 비율(2.39:1)이 되도록 띠 높이를 자동 계산.
+         아주 넓은 모니터에서도 띠가 보이게 최소 화면 높이의 5%
+     폰 세로 화면: 화면 높이의 9%로 고정 (아래 세로 화면 부분) */
+    .letterbox {
+    /* 띠 안쪽 끝의 가는 선 색: 진하게 하려면 마지막 숫자를 올림 (0.1 ~ 0.3) */
+    --lb-edge: rgba(240, 230, 210, 0.18);
+
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: max(10vh, calc((100vh - 100vw / 2.39) / 2));
+    height: max(10dvh, calc((100dvh - 100vw / 2.39) / 2));  /* 폰 주소창 높이까지 고려 (지원하는 브라우저만) */
+    background: #000;
+    pointer-events: none;
+    transition: transform var(--lb-time) cubic-bezier(0.65, 0, 0.35, 1);  /* 천천히 출발 → 빨라짐 → 천천히 멈춤 */
+  }
+
+  /* 처음엔 화면 밖에 숨어 있음. 화면 쪽 끝에 가는 선이 있어서 내려오는 게 보임 */
+  .letterbox-top {
+    top: 0;
+    border-bottom: 1px solid var(--lb-edge);
+    transform: translateY(-100%);
+  }
+  .letterbox-bottom {
+    bottom: 0;
+    border-top: 1px solid var(--lb-edge);
+    transform: translateY(100%);
+  }
+
+  /* 원을 누르면(is-started) 띠가 안으로 들어옴 */
+  .intro:global(.is-started) .letterbox {
+    transform: translateY(0);
+  }
+
+  /* 제목·소개 문장: 띠가 내려올 때 스르륵 사라짐 (띠가 글자를 반쯤 가리지 않게) */
+  .intro-text,
+  .intro-sub {
+    transition: opacity 0.6s ease;
+  }
+  .intro:global(.is-started) .intro-text,
+  .intro:global(.is-started) .intro-sub {
+    opacity: 0;
+  }
+
+  /* 세로 화면(폰 등): 띠는 얇게 고정해서 아래 노드 자리를 남김 */
+  @media (max-aspect-ratio: 1/1) {
+    .letterbox {
+      height: 9vh;
+      height: 9dvh;
+    }
+  }
+
   /* ---------- 폰 (600px 이하) ---------- */
   @media (max-width: 600px) {
     .intro {
@@ -546,6 +613,12 @@ import '@fontsource/cormorant-garamond/500-italic.css';
       box-shadow: 0 0 28px 2px rgba(240, 230, 210, 0.26), inset 0 0 12px rgba(240, 230, 210, 0.1);
     }
     .heart-btn {
+      transition: none;
+    }
+    /* 레터박스·글자도 움직임 없이 바로 바뀜 */
+    .letterbox,
+    .intro-text,
+    .intro-sub {
       transition: none;
     }
   }
