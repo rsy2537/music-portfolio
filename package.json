@@ -12,6 +12,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@fontsource/noto-sans-kr": "^5.3.1",
     "astro": "^7.4.4"
   }
 }

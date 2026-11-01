@@ -20,7 +20,10 @@ function formatTime(sec: number) {
 }
 ---
 
-<BaseLayout title={`${track.title} — Music Portfolio`}>
+<BaseLayout
+  title={`${track.title} | Music Portfolio`}
+  description={`${track.title} — ${track.emotion.join(', ')} 느낌의 ${track.sceneUse.join(', ')} 장면용 음악. 하이라이트부터 들어보고 이 느낌으로 의뢰하세요.`}
+>
   <a href="/" class="back sub">← 전체 곡</a>
 
   <h1>{track.title}</h1>

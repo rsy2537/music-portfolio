@@ -1,9 +1,17 @@
 ---
+import '@fontsource/noto-sans-kr/400.css'; // 보통 굵기 (본문용)
+import '@fontsource/noto-sans-kr/700.css'; // 굵게 (제목용)
+import '@fontsource/noto-sans-kr/500.css'; // 중간 굵기 (곡 제목용)
+
 // 모든 페이지가 같이 쓰는 틀(액자)
 interface Props {
   title?: string;
+  description?: string; // 새로 추가: 페이지 설명
 }
-const { title = 'Music Portfolio' } = Astro.props;
+const {
+  title = 'Music Portfolio',
+  description = '독립영화를 위한 맞춤 스코어. 곡을 듣고 그 느낌 그대로 작업을 의뢰하세요.',
+} = Astro.props;
 ---
 
 <html lang="ko">
@@ -11,6 +19,10 @@ const { title = 'Music Portfolio' } = Astro.props;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
+<meta name="description" content={description} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:type" content="website" />
   </head>
   <body>
     <main>
@@ -28,6 +40,8 @@ const { title = 'Music Portfolio' } = Astro.props;
   const buttons = document.querySelectorAll<HTMLButtonElement>('.play');
   let current: HTMLButtonElement | null = null;
   let switchId = 0; // 연타했을 때 마지막 버튼만 반영하기 위한 번호
+  let switching = false; // 곡을 바꾸는 중(페이드 + 불러오기)이면 true
+  let fadeTimer: ReturnType<typeof setInterval> | undefined; // 지금 돌고 있는 페이드
 
   // 페이드아웃 시간(밀리초). 느낌에 따라 조절 (예: 300, 600)
   const FADE_MS = 400;
@@ -50,40 +64,51 @@ const { title = 'Music Portfolio' } = Astro.props;
     btn.setAttribute('aria-busy', String(state === 'loading'));
   }
 
+  // 돌고 있는 페이드가 있으면 멈춘다
+  function stopFade() {
+    if (fadeTimer !== undefined) {
+      clearInterval(fadeTimer);
+      fadeTimer = undefined;
+    }
+  }
+
   // 새 곡을 넣고 재생한다. 재생이 막히면 버튼을 원래대로 돌린다
   function startTrack(btn: HTMLButtonElement) {
+    stopFade();
     audio.volume = 1;
-    audio.src = btn.dataset.src!;
     const start = Number(btn.dataset.start ?? 0);
-    if (start > 0) {
-      audio.addEventListener('loadedmetadata', () => (audio.currentTime = start), { once: true });
-    }
+    // 주소 끝에 #t=초 를 붙이면 브라우저가 그 지점부터 재생한다
+    audio.src = start > 0 ? `${btn.dataset.src}#t=${start}` : btn.dataset.src!;
     audio.play().catch(() => {
-      if (current === btn) setState(btn, 'idle');
+      if (current === btn) {
+        switching = false;
+        setState(btn, 'idle');
+      }
     });
   }
 
   // 지금 소리를 FADE_MS 동안 서서히 줄이고, 다 줄면 done을 실행한다
+  // (화면 그리기와 상관없이 시계 기준으로 줄여서, 중간에 멈추지 않는다)
   function fadeOut(done: () => void) {
+    stopFade();
     const startVolume = audio.volume;
     const startTime = performance.now();
-    function step(now: number) {
-      const progress = Math.min((now - startTime) / FADE_MS, 1);
+    fadeTimer = setInterval(() => {
+      const progress = Math.min((performance.now() - startTime) / FADE_MS, 1);
       audio.volume = startVolume * (1 - progress);
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else {
+      if (progress >= 1) {
+        stopFade();
         audio.pause();
         done();
       }
-    }
-    requestAnimationFrame(step);
+    }, 20);
   }
 
   buttons.forEach((btn) => {
     btn.addEventListener('click', () => {
-      // 같은 버튼: 재생 ↔ 일시정지
+      // 같은 버튼
       if (current === btn) {
+        if (switching) return; // 곡을 바꾸는 중이면 무시 (엉뚱한 곡이 끊기지 않게)
         if (audio.paused) {
           audio.play().catch(() => setState(btn, 'idle'));
         } else {
@@ -95,6 +120,7 @@ const { title = 'Music Portfolio' } = Astro.props;
       // 다른 버튼: 이전 버튼 원래대로, 새 버튼은 '불러오는 중'
       if (current) setState(current, 'idle');
       current = btn;
+      switching = true;
       setState(btn, 'loading');
       const myId = ++switchId;
 
@@ -112,10 +138,18 @@ const { title = 'Music Portfolio' } = Astro.props;
   });
 
   // 실제 소리 상태에 맞춰 버튼을 바꾼다
-  audio.addEventListener('playing', () => current && setState(current, 'playing'));
+  audio.addEventListener('playing', () => {
+    switching = false;
+    if (current) setState(current, 'playing');
+  });
   audio.addEventListener('waiting', () => current && setState(current, 'loading'));
-  audio.addEventListener('pause', () => current && setState(current, 'idle'));
-  audio.addEventListener('error', () => current && setState(current, 'idle'));
+  audio.addEventListener('pause', () => {
+    if (!switching && current) setState(current, 'idle'); // 곡 바꾸는 중의 멈춤은 무시
+  });
+  audio.addEventListener('error', () => {
+    switching = false;
+    if (current) setState(current, 'idle');
+  });
 </script>
 
 <style is:global>
