@@ -1,11 +1,62 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// 곡 정보 파일을 불러온다
+import tracks from '../data/tracks.json';
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Music Portfolio</title>
+  </head>
+  <body>
+    <main>
+      <h1>Music Portfolio</h1>
+      <p class="intro">독립영화를 위한 맞춤 스코어</p>
+
+      <ul class="track-list">
+        {tracks.map((track) => (
+          <li class="track">
+            <h2>{track.title}</h2>
+            {track.emotion && <p class="tags">{track.emotion.join(' · ')}</p>}
+          </li>
+        ))}
+      </ul>
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  body {
+    margin: 0;
+    background: #0B0908;   /* 웜 블랙 배경 */
+    color: #F0E6D2;        /* 아이보리 글자 */
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 64px 24px;
+  }
+  .intro, .tags {
+    color: #A89C88;        /* 보조 글자색 */
+  }
+  .track-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 48px;
+  }
+  .track {
+    padding: 20px 0;
+    border-bottom: 1px solid #2A2420;
+  }
+  .track h2 {
+    margin: 0 0 6px;
+    font-size: 1.2rem;
+    font-weight: 500;
+  }
+  .tags {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+</style>
