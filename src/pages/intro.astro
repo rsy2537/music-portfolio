@@ -24,6 +24,11 @@ import '@fontsource/cormorant-garamond/500-italic.css';
         if (params.has('skip') || (AUTO_SKIP_RETURNING && seen && !params.has('intro'))) {
           intro.classList.add('is-skipped', 'is-started');
         }
+
+        // 주소 끝 ?clef = 높은음자리표 위치·크기 미리보기 (B-2 확인용)
+        if (params.has('clef')) {
+          intro.classList.add('show-clef');
+        }
       })();
     </script>
 
@@ -92,6 +97,14 @@ import '@fontsource/cormorant-garamond/500-italic.css';
               <use href="#ekg-half" class="ekg-tail ekg-tail-1" />
             </g>
           </g>
+
+          <!-- 높은음자리표 (변신의 도착 모양). 확정 초안(viewBox 0 0 200 340)의 x 좌표에 +500 → 가로 틀 가운데.
+               아래 고리 중심 (600, 196), 반지름 48. 평소엔 숨김, B-3에서 원이 이 모양으로 변신 -->
+          <path
+            id="clef"
+            class="clef"
+            d="M 582 302 C 576 316, 584 330, 595 329 C 605 328, 607 318, 606 306 C 604 236, 595 116, 592 48 C 590 26, 598 10, 607 10 C 618 10, 625 24, 623 42 C 621 66, 598 88, 582 106 C 564 128, 552 164, 552 196 C 552 222.5, 573.5 244, 600 244 C 626.5 244, 648 222.5, 648 196 C 648 169.5, 626.5 148, 600 148 C 582 148, 572 162, 574 178 C 576 194, 592 202, 606 196 C 616 191, 616 176, 606 172 C 598 169, 592 178, 598 184"
+          />
         </svg>
       </div>
 
@@ -187,7 +200,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
 
 <style>
   .intro {
-    /* EKG 굵기: 이 숫자 하나로 조절 (폰은 아래 600px 이하 부분) */
+    /* EKG 굵기: 이 숫자 하나로 조절 (폰은 아래 600px 이하 부분). 높은음자리표도 같은 굵기 */
     --ekg-w: 4px;
     /* 레터박스가 내려오는 시간: 느낌에 따라 조절 */
     --lb-time: 2.5s;
@@ -319,6 +332,24 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     stroke-width: var(--ekg-w);
     stroke-linecap: round;
     stroke-linejoin: round;
+  }
+
+  /* ---------- 높은음자리표 (B-3에서 원이 이 모양으로 변신) ----------
+     평소엔 숨김. 주소 끝 ?clef 로 열면 보임 (원 버튼은 반투명 → 고리와 크기 비교) */
+  .clef {
+    fill: none;
+    stroke: #E8B04A;
+    stroke-width: var(--ekg-w);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0;
+  }
+
+  .intro:global(.show-clef) .clef {
+    opacity: 1;
+  }
+  .intro:global(.show-clef) .heart-btn {
+    opacity: 0.35;
   }
 
   /* ===== 연출 시간표 =====
@@ -605,7 +636,7 @@ import '@fontsource/cormorant-garamond/500-italic.css';
 
   /* ---------- 레터박스 (위아래 검은 띠) ----------
      PC: 가운데가 영화 와이드 비율(2.39:1)이 되도록 띠 높이를 자동 계산.
-         아주 넓은 모니터에서도 띠가 보이게 최소 화면 높이의 5%
+         띠가 확실히 보이게 최소 화면 높이의 10%
      폰 세로 화면: --lb-phone으로 고정 (아래 세로 화면 부분) */
   .letterbox {
     /* 띠 안쪽 끝의 가는 선 색: 진하게 하려면 마지막 숫자를 올림 (0.1 ~ 0.3) */
@@ -614,8 +645,8 @@ import '@fontsource/cormorant-garamond/500-italic.css';
     position: absolute;
     left: 0;
     right: 0;
-    height: max(10vh calc((100vh - 100vw / 2.39) / 2));
-    height: max(10vh, calc((100dvh - 100vw / 2.39) / 2));  /* 폰 주소창 높이까지 고려 (지원하는 브라우저만) */
+    height: max(10vh, calc((100vh - 100vw / 2.39) / 2));
+    height: max(10dvh, calc((100dvh - 100vw / 2.39) / 2));  /* 폰 주소창 높이까지 고려 (지원하는 브라우저만) */
     background: #000;
     pointer-events: none;
     transition: transform var(--lb-time) cubic-bezier(0.65, 0, 0.35, 1);  /* 천천히 출발 → 빨라짐 → 천천히 멈춤 */
